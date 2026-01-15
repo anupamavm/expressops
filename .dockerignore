@@ -11,5 +11,9 @@ README.md
 tests
 coverage
 .eslintrc.json
+eslint.config.js
+.prettierrc.json
+.husky
+jest.config.js
 Dockerfile
 .dockerignore

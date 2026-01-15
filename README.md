@@ -117,7 +117,6 @@ docker-compose up
 This project uses GitHub Actions for CI/CD:
 
 - **Test Job**: Runs on Node.js 18.x and 20.x
-
   - Linting
   - Unit tests
   - Code coverage

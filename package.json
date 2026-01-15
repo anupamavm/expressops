@@ -1,37 +1,53 @@
 {
-	"name": "expressops",
-	"version": "1.0.0",
-	"description": "Express.js CI/CD Practice Project",
-	"main": "src/server.js",
-	"scripts": {
-		"start": "node src/server.js",
-		"dev": "nodemon src/server.js",
-		"test": "jest",
-		"test:watch": "jest --watch",
-		"test:coverage": "jest --coverage",
-		"lint": "eslint .",
-		"lint:fix": "eslint . --fix"
-	},
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/anupamavm/expressops.git"
-	},
-	"keywords": [],
-	"author": "",
-	"license": "ISC",
-	"type": "commonjs",
-	"bugs": {
-		"url": "https://github.com/anupamavm/expressops/issues"
-	},
-	"homepage": "https://github.com/anupamavm/expressops#readme",
-	"dependencies": {
-		"dotenv": "^17.2.3",
-		"express": "^5.2.1"
-	},
-	"devDependencies": {
-		"eslint": "^9.39.2",
-		"jest": "^30.2.0",
-		"nodemon": "^3.1.11",
-		"supertest": "^7.2.2"
-	}
+  "name": "expressops",
+  "version": "1.0.0",
+  "description": "Express.js CI/CD Practice Project",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anupamavm/expressops.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/anupamavm/expressops/issues"
+  },
+  "homepage": "https://github.com/anupamavm/expressops#readme",
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "jest": "^30.2.0",
+    "lint-staged": "^16.2.7",
+    "nodemon": "^3.1.11",
+    "prettier": "^3.8.0",
+    "supertest": "^7.2.2"
+  },
+  "lint-staged": {
+    "*.js": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
+  }
 }

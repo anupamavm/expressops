@@ -1,6 +1,6 @@
-const express = require("express");
-const healthRoutes = require("./routes/health");
-const errorMiddleware = require("./middlewares/error.middleware");
+const express = require('express');
+const healthRoutes = require('./routes/health');
+const errorMiddleware = require('./middlewares/error.middleware');
 
 const app = express();
 
@@ -9,7 +9,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
-app.use("/api", healthRoutes);
+app.use('/api', healthRoutes);
 
 // Error handling middleware (must be last)
 app.use(errorMiddleware);
