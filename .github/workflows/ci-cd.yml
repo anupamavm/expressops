@@ -127,19 +127,31 @@ jobs:
         uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: 'trivy-results.sarif'
-          cache-to: type=inline
 
   deploy:
-    needs: build
     runs-on: ubuntu-latest
+    needs: build
     if: github.ref == 'refs/heads/main'
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "Deploying application..."
 
-      - name: Deploy to production
-        run: |
-          echo "Deploying to production..."
-          # Add your deployment commands here
-          # For example: kubectl apply -f k8s/ or ssh commands
+            docker pull ${{ secrets.DOCKER_USERNAME }}/expressops:latest
+
+            docker stop expressops || true
+            docker rm expressops || true
+
+            docker run -d \
+              --name expressops \
+              -p 3000:3000 \
+              --restart unless-stopped \
+              ${{ secrets.DOCKER_USERNAME }}/expressops:latest
+
+            echo "Deployment completed successfully!"
