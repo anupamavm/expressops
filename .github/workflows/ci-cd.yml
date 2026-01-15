@@ -104,19 +104,18 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build Docker image
+      - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
           context: .
-          push: false
-          load: true
+          push: true
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/expressops:latest
             ${{ secrets.DOCKER_USERNAME }}/expressops:${{ github.sha }}
           cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/expressops:latest
           cache-to: type=inline
 
-      - name: Scan Docker image with Trivy
+      - name: Run Trivy scan on pushed image
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ secrets.DOCKER_USERNAME }}/expressops:latest
@@ -128,16 +127,6 @@ jobs:
         uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: 'trivy-results.sarif'
-
-      - name: Push Docker image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: true
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/expressops:latest
-            ${{ secrets.DOCKER_USERNAME }}/expressops:${{ github.sha }}
-          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/expressops:latest
           cache-to: type=inline
 
   deploy:
