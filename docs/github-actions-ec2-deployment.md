@@ -292,75 +292,191 @@ The deployment key should only have:
 
 ---
 
-## Setup Instructions
+## Complete Setup Instructions
 
-### Step 1: Generate GitHub Actions SSH Key
+### Prerequisites
 
-On your local machine:
+- AWS EC2 instance running (Ubuntu 22.04 or later recommended)
+- EC2 instance's public IP address
+- AWS `.pem` key file for initial access
+- GitHub repository with Actions enabled
+
+---
+
+### Part 1: Initial EC2 Connection
+
+**Step 1: Connect to EC2**
 
 ```bash
-# Generate new Ed25519 key pair
-ssh-keygen -t ed25519 -C "github-actions-deploy" -f ~/.ssh/github_actions_ed25519 -N ""
-
-# Display public key (to add to EC2)
-cat ~/.ssh/github_actions_ed25519.pub
-
-# Display private key (to add to GitHub Secrets)
-cat ~/.ssh/github_actions_ed25519
+ssh -i express-key.pem ubuntu@<EC2_PUBLIC_IP>
 ```
 
-### Step 2: Add Public Key to EC2
+Replace `<EC2_PUBLIC_IP>` with your actual EC2 public IP address.
 
-**Option A: Using SSH (recommended)**
+---
+
+### Part 2: Configure EC2 Server
+
+**Step 2: Update Server Packages**
 
 ```bash
-# SSH into EC2 using your AWS key
-ssh -i ~/.ssh/express-key.pem ubuntu@<EC2_IP>
+sudo apt update
+```
 
-# Add the public key
-echo "ssh-ed25519 AAAAC3... github-actions-deploy" >> ~/.ssh/authorized_keys
+This ensures all package lists are up-to-date.
 
-# Set correct permissions
+**Step 3: Install Docker**
+
+```bash
+sudo apt install -y docker.io
+```
+
+**Step 4: Start Docker and Enable Auto-Start**
+
+```bash
+# Start Docker service
+sudo systemctl start docker
+
+# Enable Docker to start on system boot
+sudo systemctl enable docker
+```
+
+**Step 5: Allow Docker Without sudo**
+
+```bash
+# Add ubuntu user to docker group
+sudo usermod -aG docker ubuntu
+
+# Exit to apply group changes
+exit
+```
+
+**Step 6: Reconnect to EC2**
+
+```bash
+ssh -i express-key.pem ubuntu@<EC2_PUBLIC_IP>
+```
+
+**Step 7: Test Docker Installation**
+
+```bash
+docker ps
+```
+
+✅ If you see an empty list (no error), Docker is ready!
+
+---
+
+### Part 3: SSH Access for GitHub Actions
+
+GitHub Actions needs its own SSH key to authenticate with EC2.
+
+**Step 8: Create SSH Key for GitHub Actions**
+
+On your **local machine** (not EC2):
+
+```bash
+ssh-keygen -t ed25519 -C "github-actions"
+```
+
+When prompted:
+
+- Press **Enter** to accept default file location (`~/.ssh/id_ed25519`)
+- Press **Enter** twice to skip passphrase (required for automation)
+
+**Files created:**
+
+- `~/.ssh/id_ed25519` → Private key (keep secret)
+- `~/.ssh/id_ed25519.pub` → Public key (share with EC2)
+
+**Step 9: Copy Public Key**
+
+```bash
+cat ~/.ssh/id_ed25519.pub
+```
+
+Copy the entire output (starts with `ssh-ed25519 AAAA...`).
+
+**Step 10: Add Public Key to EC2**
+
+SSH into EC2:
+
+```bash
+ssh -i express-key.pem ubuntu@<EC2_PUBLIC_IP>
+```
+
+Open the authorized_keys file:
+
+```bash
+nano ~/.ssh/authorized_keys
+```
+
+- Paste the public key on a new line
+- Press `Ctrl + O` to save
+- Press `Enter` to confirm
+- Press `Ctrl + X` to exit
+
+**Step 11: Set Correct Permissions**
+
+```bash
 chmod 600 ~/.ssh/authorized_keys
 ```
 
-**Option B: Using AWS EC2 Instance Connect**
+This ensures only the owner can read/write the file.
 
-1. Go to EC2 Console
-2. Select your instance → Connect → EC2 Instance Connect
-3. Run the same commands as Option A
+---
 
-### Step 3: Add Secrets to GitHub
+### Part 4: Add Secrets to GitHub
 
-1. Navigate to your repository
-2. Go to **Settings** → **Secrets and variables** → **Actions**
-3. Click **New repository secret**
-4. Add the following secrets:
+**Step 12: Navigate to GitHub Repository Settings**
 
-**EC2_SSH_KEY:**
+1. Go to your repository on GitHub
+2. Click **Settings** (top menu)
+3. In the left sidebar: **Secrets and variables** → **Actions**
+4. Click **New repository secret**
+
+**Step 13: Add Required Secrets**
+
+Create three secrets with these exact names:
+
+**Secret 1: EC2_HOST**
+
+- **Name:** `EC2_HOST`
+- **Value:** Your EC2 public IP address (e.g., `54.123.45.67`)
+
+**Secret 2: EC2_USER**
+
+- **Name:** `EC2_USER`
+- **Value:** `ubuntu`
+
+**Secret 3: EC2_SSH_KEY**
+
+- **Name:** `EC2_SSH_KEY`
+- **Value:** Contents of your private key
+
+To get the private key, run on your local machine:
+
+```bash
+cat ~/.ssh/id_ed25519
+```
+
+Copy **everything**, including:
 
 ```
 -----BEGIN OPENSSH PRIVATE KEY-----
-b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
-... (entire private key content) ...
+... (all the content) ...
 -----END OPENSSH PRIVATE KEY-----
 ```
 
-**EC2_HOST:**
+Paste the entire content into the GitHub secret.
 
-```
-54.123.45.67
-```
+---
 
-**EC2_USER:**
+### Part 5: Test the Connection
 
-```
-ubuntu
-```
+**Step 14: Create Test Workflow**
 
-### Step 4: Test the Connection
-
-Create a test workflow (`.github/workflows/test-ssh.yml`):
+Create file `.github/workflows/test-ssh.yml`:
 
 ```yaml
 name: Test SSH Connection
@@ -378,13 +494,22 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            echo "Connection successful!"
-            whoami
-            pwd
-            uname -a
+            echo "✅ Connection successful!"
+            echo "Logged in as: $(whoami)"
+            echo "Current directory: $(pwd)"
+            echo "Server info: $(uname -a)"
+            echo "Docker version: $(docker --version)"
 ```
 
-Run the workflow manually from Actions tab.
+**Step 15: Run the Test**
+
+1. Go to your repository's **Actions** tab
+2. Select **Test SSH Connection** workflow
+3. Click **Run workflow** → **Run workflow**
+4. Wait for completion
+5. Check logs for success message
+
+✅ If you see "Connection successful!" and no errors, setup is complete!
 
 ---
 
