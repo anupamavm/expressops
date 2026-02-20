@@ -1,0 +1,151 @@
+name: Infrastructure Provisioning
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Terraform action to perform'
+        required: true
+        default: 'plan'
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+  push:
+    branches: [main]
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/infrastructure.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'terraform/**'
+
+env:
+  TF_VERSION: '1.6.0'
+  AWS_REGION: 'us-east-1'
+
+jobs:
+  terraform:
+    name: Terraform ${{ github.event.inputs.action || 'plan' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./terraform
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Format Check
+        id: fmt
+        run: terraform fmt -check -recursive
+        continue-on-error: true
+
+      - name: Terraform Init
+        id: init
+        run: terraform init
+
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate -no-color
+
+      - name: Terraform Plan
+        id: plan
+        if: github.event_name == 'pull_request' || github.event.inputs.action == 'plan' || github.event.inputs.action == ''
+        run: terraform plan -no-color -input=false
+        env:
+          TF_VAR_github_actions_public_key: ${{ secrets.GITHUB_ACTIONS_PUBLIC_KEY }}
+        continue-on-error: true
+
+      - name: Comment PR with Plan
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        env:
+          PLAN: '${{ steps.plan.outputs.stdout }}'
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+            #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
+            #### Terraform Validation 🤖\`${{ steps.validate.outcome }}\`
+            #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+
+            <details><summary>Show Plan</summary>
+
+            \`\`\`terraform
+            ${process.env.PLAN}
+            \`\`\`
+
+            </details>
+
+            *Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+
+      - name: Terraform Plan Status
+        if: steps.plan.outcome == 'failure'
+        run: exit 1
+
+      - name: Terraform Apply
+        if: |
+          (github.ref == 'refs/heads/main' && github.event_name == 'push') ||
+          (github.event.inputs.action == 'apply')
+        run: terraform apply -auto-approve -input=false
+        env:
+          TF_VAR_github_actions_public_key: ${{ secrets.GITHUB_ACTIONS_PUBLIC_KEY }}
+
+      - name: Terraform Destroy
+        if: github.event.inputs.action == 'destroy'
+        run: terraform destroy -auto-approve -input=false
+        env:
+          TF_VAR_github_actions_public_key: ${{ secrets.GITHUB_ACTIONS_PUBLIC_KEY }}
+
+      - name: Terraform Output
+        if: |
+          (github.ref == 'refs/heads/main' && github.event_name == 'push') ||
+          (github.event.inputs.action == 'apply')
+        id: output
+        run: terraform output -json
+
+      - name: Display Connection Info
+        if: |
+          (github.ref == 'refs/heads/main' && github.event_name == 'push') ||
+          (github.event.inputs.action == 'apply')
+        run: |
+          echo "### 🎉 Infrastructure Provisioned Successfully!"
+          echo ""
+          echo "#### Connection Details:"
+          echo "- **EC2 Public IP:** $(terraform output -raw instance_public_ip)"
+          echo "- **SSH User:** $(terraform output -raw ec2_user)"
+          echo "- **Application URL:** $(terraform output -raw application_url)"
+          echo ""
+          echo "#### Add these to GitHub Secrets:"
+          echo "- EC2_HOST=$(terraform output -raw instance_public_ip)"
+          echo "- EC2_USER=$(terraform output -raw ec2_user)"
+          echo "- EC2_SSH_KEY=<contents of ~/.ssh/github_actions_ed25519>"
+          echo ""
+          echo "#### SSH Command:"
+          echo "$(terraform output -raw ssh_connection_command)"

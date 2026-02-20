@@ -7,8 +7,13 @@ on:
       - '**.md'
       - 'docs/**'
       - 'README.md'
+      - 'terraform/**'
+      - '.github/workflows/infrastructure.yml'
   pull_request:
     branches: [main, develop]
+    paths-ignore:
+      - 'terraform/**'
+      - '.github/workflows/infrastructure.yml'
 
 jobs:
   security:
