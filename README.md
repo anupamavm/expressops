@@ -7,14 +7,14 @@ A simple Express.js application for practicing CI/CD pipelines with GitHub Actio
 - ✅ Simple Express.js REST API
 - ✅ Health check endpoint
 - ✅ Jest testing setup
-- ✅ ESLint configuration
+- ✅ ESLint configuration with prettier
 - ✅ Docker support
 - ✅ GitHub Actions CI/CD pipeline
 - ✅ Error handling middleware
 
 ## Prerequisites
 
-- Node.js 18.x or 20.x
+- Node.js 20.x or 22.x
 - npm or yarn
 - Docker (optional)
 
@@ -157,19 +157,3 @@ expressops/
 ├── package.json                    # Project dependencies
 └── README.md                       # This file
 ```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## License
-
-MIT
-
-## Author
-
-Your Name
