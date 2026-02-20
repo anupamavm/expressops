@@ -364,14 +364,4 @@ Or add host key to known_hosts:
     ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 ```
 
-### Common Issues Checklist
-
-- [ ] Private key is complete with header/footer
-- [ ] Public key exists in EC2 `authorized_keys`
-- [ ] File permissions: `~/.ssh` (700), `authorized_keys` (600)
-- [ ] Security group allows port 22
-- [ ] EC2 instance is running
-- [ ] Correct username (ubuntu/ec2-user)
-- [ ] No passphrase on the private key
-
 ---
